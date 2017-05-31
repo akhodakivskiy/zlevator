@@ -32,7 +32,7 @@ trait ElevatorCostFunction {
 
 ### Initial implementation
 
-Inital implementation (2862e70cd944529e445ee9a4b70993aad4159b99) consists of a series of functions that return updated instances of domain objects. The problem with this implementation is that the interface is hard to use and there is no meaningful feedback about the state of the system and the events that occur along the way.
+Inital implementation 2862e70cd944529e445ee9a4b70993aad4159b99 consists of a series of functions that return updated instances of domain objects. The problem with this implementation is that the interface is hard to use and there is no meaningful feedback about the state of the system and the events that occur along the way.
 
 ### Scalaz based implementation
 
