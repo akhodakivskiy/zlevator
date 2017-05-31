@@ -19,41 +19,43 @@ case class Elevator(config: ElevatorConfig, lastFloor: Int, requests: Queue[Elev
 }
 
 object Elevator {
-  def canDispatch(elevator: Elevator, dispatch: ElevatorDispatchMessage): Boolean = {
+  import scalaz._
+  import Scalaz._
+
+  type ElevatorState[T] = State[Elevator, T]
+
+  def canDispatch(dispatch: ElevatorDispatchMessage): ElevatorState[Boolean] = State.gets { elevator =>
     elevator.config.name == dispatch.name && elevator.config.minFloor <= dispatch.floor && dispatch.floor <= elevator.config.maxFloor
   }
 
-  def dispatch(elevator: Elevator, message: ElevatorDispatchMessage): Elevator = {
-    if (canDispatch(elevator, message)) {
-      if (elevator.lastFloor == message.floor) {
-        elevator
-      } else {
-        val req = ElevatorRequest(message.floor, message.directionOpt)
-        elevator.copy(requests = elevator.requests.enqueue(req))
-      }
+  def dispatch(dispatch: ElevatorDispatchMessage): ElevatorState[String] = State { elevator =>
+    if (elevator.lastFloor == dispatch.floor) {
+      (elevator, s"elevator ${elevator.config.name} is already at floor ${dispatch.floor}")
     } else {
-      throw new IllegalArgumentException(s"can't dispatch elevator ${elevator.config.name} to ${message.floor} floor")
+      val req = ElevatorRequest(dispatch.floor, dispatch.directionOpt)
+      val e = elevator.copy(requests = elevator.requests.enqueue(req))
+
+      (e, s"elevator ${elevator.config.name} dispatched to floor ${dispatch.floor}")
     }
   }
 
-  def moveOne(elevator: Elevator): Elevator = {
+  val moveOne: ElevatorState[Option[String]] = State { elevator =>
     elevator.requests.headOption match {
-      case None =>
-        elevator
+      case None => (elevator, None)
       case Some(ElevatorRequest(floor, _)) =>
         val newFloor: Int = elevator.lastFloor + (if (floor > elevator.lastFloor) 1 else -1)
-        val newRequests: Queue[ElevatorRequest] = elevator.requests.filter(_.floor != newFloor)
-        elevator.copy(lastFloor = newFloor, requests = newRequests)
+        val (filledRequests, pendingRequests) = elevator.requests.partition(_.floor == newFloor)
+        if (filledRequests.isEmpty) {
+          (elevator.copy(lastFloor = newFloor), None)
+        } else {
+          val message = s"elevator ${elevator.config.name} filled ${filledRequests.size} at floor $newFloor"
+          (elevator.copy(lastFloor = newFloor, requests = pendingRequests), Some(message))
+        }
     }
   }
 
-  @tailrec
-  def move(elevator: Elevator, floors: Int): Elevator = {
-    floors match {
-      case n if n < 0 => throw new IllegalArgumentException(s"can't move the elevator by $floors floors")
-      case 0 => elevator
-      case 1 => moveOne(elevator)
-      case _ => move(moveOne(elevator), floors - 1)
-    }
+  def move(floors: Int): ElevatorState[List[String]] = State { elevator =>
+    val (e, messages) = List.fill(floors)(moveOne).runTraverseS[Elevator, Option[String]](elevator)(identity)
+    (e, messages.flatten)
   }
 }

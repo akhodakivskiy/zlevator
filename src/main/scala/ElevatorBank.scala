@@ -4,13 +4,27 @@ import scala.collection.immutable.Queue
 case class ElevatorBank(elevators: Map[String, Elevator], requests: Queue[FloorRequestMessage] = Queue.empty)
 
 object ElevatorBank {
-  def processRequest(bank: ElevatorBank, request: FloorRequestMessage): ElevatorBank = {
-    processRequests(bank.copy(requests = bank.requests.enqueue(request)))
+  import scalaz._
+  import Scalaz._
+
+  type ElevatorBankState[T] = State[ElevatorBank, T]
+
+  def request(req: FloorRequestMessage): ElevatorBankState[List[String]] = {
+    for {
+      msg <- State { bank: ElevatorBank =>
+        val message = s"request to ${req.floor} with ${req.direction} direction has been queued"
+        (bank.copy(requests = bank.requests.enqueue(req)), message)
+      }
+      messages <- processRequests
+    } yield {
+      msg :: messages
+    }
   }
 
-  def processRequests(bank: ElevatorBank): ElevatorBank = {
+  def processRequests: ElevatorBankState[List[String]] = State.apply[ElevatorBank, List[String]] { bank: ElevatorBank =>
     bank.requests match {
-      case Queue() => bank
+      case Queue() =>
+        (bank, Nil)
       case req +: tail =>
         val costs: Map[Elevator, Int] = bank.elevators.values.flatMap { elevator =>
           val dispatch = ElevatorDispatchMessage(elevator.config.name, req.floor, Some(req.direction))
@@ -19,37 +33,50 @@ object ElevatorBank {
         }.toMap
 
         if (costs.isEmpty) {
-          bank
+          (bank, Nil)
         } else {
           val (elevator, _) = costs.minBy(_._2)
 
           val dispatch = ElevatorDispatchMessage(elevator.config.name, req.floor, Some(req.direction))
-          val newElevator = Elevator.dispatch(elevator, dispatch)
-          val newBank = bank.copy(elevators = bank.elevators.updated(newElevator.config.name, newElevator), tail)
+          val (newElevator, m1) = Elevator.dispatch(dispatch).run(elevator)
+          val b1 = bank.copy(elevators = bank.elevators.updated(newElevator.config.name, newElevator), tail)
 
-          processRequests(newBank)
+          val (b2, m2) = processRequests.run(b1)
+
+          (b2, m1 :: m2)
         }
     }
   }
 
-  def dispatch(bank: ElevatorBank, dispatch: ElevatorDispatchMessage): ElevatorBank = {
+  def dispatch(dispatch: ElevatorDispatchMessage): ElevatorBankState[String] = State { bank =>
     bank.elevators.get(dispatch.name) match {
-      case None => throw new IllegalArgumentException(s"elevator '${dispatch.name} doesn't exist")
-      case Some(elevator) => bank.copy(elevators = bank.elevators.updated(dispatch.name, Elevator.dispatch(elevator, dispatch)))
+      case None =>
+        (bank, s"elevator ${dispatch.name} doesn't exist")
+      case Some(elevator) =>
+        val message = s"elevator ${dispatch.name} dispatched to floor ${dispatch.floor}"
+        val (e, msg) = Elevator.dispatch(dispatch).run(elevator)
+        (bank.copy(elevators = bank.elevators.updated(dispatch.name, e)), msg)
     }
   }
 
-  def moveOne(bank: ElevatorBank): ElevatorBank = {
-    processRequests(bank.copy(elevators = bank.elevators.mapValues(Elevator.moveOne).view.toMap))
+  val moveOne: ElevatorBankState[List[String]] = {
+    for {
+      m1 <- State { bank: ElevatorBank =>
+        val elevators: Map[String, (Elevator, Option[String])] = bank.elevators.mapValues { elevator =>
+            val (e, msgs) = Elevator.moveOne.run(elevator)
+            (e, msgs)
+        }.view.toMap
+
+        (bank.copy(elevators = elevators.mapValues(_._1).view.toMap), elevators.values.flatMap(_._2).toList)
+      }
+      m2 <- processRequests
+    } yield {
+      m1 ::: m2
+    }
   }
 
-  @tailrec
-  def move(bank: ElevatorBank, floors: Int): ElevatorBank = {
-    floors match {
-      case n if n < 0 => throw new IllegalArgumentException(s"can't move the elevator by $floors floors")
-      case 0 => bank
-      case 1 => moveOne(bank)
-      case _ => move(moveOne(bank), floors - 1)
-    }
+  def move(floors: Int): ElevatorBankState[List[String]] = State { bank =>
+    val (e, messages) = List.fill(floors)(moveOne).runTraverseS[ElevatorBank, List[String]](bank)(identity)
+    (e, messages.flatten)
   }
 }

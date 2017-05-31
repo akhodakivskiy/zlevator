@@ -11,24 +11,26 @@ class SingleOccupancyElevatorCostFunctionTest extends FunSuite with Matchers {
   val initBank: ElevatorBank = ElevatorBank(initElevators)
 
   test("dispatch closest free elevator") {
-    val b1: ElevatorBank = ElevatorBank.processRequest(initBank, FloorRequestMessage(3, Direction.Up, SingleOccupancyElevatorCostFunction))
-    b1.elevators.get("a").map(_.isMoving) should contain (true)
-
-    val b2: ElevatorBank = ElevatorBank.processRequest(initBank, FloorRequestMessage(7, Direction.Up, SingleOccupancyElevatorCostFunction))
-    b2.elevators.get("b").map(_.isMoving) should contain (true)
+    ElevatorBank.request(FloorRequestMessage(3, Direction.Up, SingleOccupancyElevatorCostFunction)).exec(initBank).elevators.get("a").map(_.isMoving) should contain (true)
+    ElevatorBank.request(FloorRequestMessage(7, Direction.Up, SingleOccupancyElevatorCostFunction)).exec(initBank).elevators.get("b").map(_.isMoving) should contain (true)
   }
 
   test("requests are queued if all elevators are busy") {
-    val b1: ElevatorBank = ElevatorBank.processRequest(initBank, FloorRequestMessage(3, Direction.Up, SingleOccupancyElevatorCostFunction))
-    val b2: ElevatorBank = ElevatorBank.processRequest(b1, FloorRequestMessage(7, Direction.Up, SingleOccupancyElevatorCostFunction))
-    val b3: ElevatorBank = ElevatorBank.processRequest(b2, FloorRequestMessage(5, Direction.Up, SingleOccupancyElevatorCostFunction))
-    b3.elevators.get("a").map(_.isMoving) should contain (true)
-    b3.elevators.get("b").map(_.isMoving) should contain (true)
-    b3.requests.size shouldBe 1
+    val b1 = (for {
+      m1 <- ElevatorBank.request(FloorRequestMessage(3, Direction.Up, SingleOccupancyElevatorCostFunction))
+      m2 <- ElevatorBank.request(FloorRequestMessage(7, Direction.Up, SingleOccupancyElevatorCostFunction))
+      m3 <- ElevatorBank.request(FloorRequestMessage(5, Direction.Up, SingleOccupancyElevatorCostFunction))
+    } yield {
+      m1 ::: m2 ::: m3
+    }).exec(initBank)
 
-    val b4: ElevatorBank = ElevatorBank.move(b3, 5)
-    b4.requests shouldBe empty
-    b4.elevators.get("a").toSeq.flatMap(_.requests) shouldBe empty
-    b4.elevators.get("b").toSeq.flatMap(_.requests) shouldBe empty
+    b1.elevators.get("a").map(_.isMoving) should contain (true)
+    b1.elevators.get("b").map(_.isMoving) should contain (true)
+    b1.requests.size shouldBe 1
+
+    val b2: ElevatorBank = ElevatorBank.move(5).exec(b1)
+    b2.requests shouldBe empty
+    b2.elevators.get("a").toSeq.flatMap(_.requests) shouldBe empty
+    b2.elevators.get("b").toSeq.flatMap(_.requests) shouldBe empty
   }
 }

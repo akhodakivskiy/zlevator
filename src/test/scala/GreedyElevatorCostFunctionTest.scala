@@ -12,34 +12,19 @@ class GreedyElevatorCostFunctionTest extends FunSuite with Matchers {
 
   test("process request with greedy elevator cost function") {
     val costFunction = GreedyElevatorCostFunction("a")
-    val b1 = ElevatorBank.processRequest(initBank, FloorRequestMessage(5, Direction.Up, costFunction))
-    b1.elevators.get("a").map(_.isMoving) shouldBe Some(true)
-    b1.elevators.get("a").map(_.requests.size) shouldBe Some(1)
-    b1.elevators.get("b").map(_.isMoving) shouldBe Some(false)
-    b1.elevators.get("b").map(_.requests.size) shouldBe Some(0)
+    val b = (for {
+      m1 <- ElevatorBank.request(FloorRequestMessage(5, Direction.Up, costFunction))
+      m2 <- ElevatorBank.moveOne
+      m3 <- ElevatorBank.move(4)
+      m4 <- ElevatorBank.dispatch(ElevatorDispatchMessage("a", 7, None))
+      m5 <- ElevatorBank.move(2)
+    } yield {
+      m1 ::: m2 ::: m3 ::: (m4 :: m5)
+    }).exec(initBank)
 
-    val b2: ElevatorBank = ElevatorBank.moveOne(b1)
-    b2.elevators.get("a").map(_.isMoving) shouldBe Some(true)
-    b2.elevators.get("a").map(_.requests.size) shouldBe Some(1)
-    b2.elevators.get("b").map(_.isMoving) shouldBe Some(false)
-    b2.elevators.get("b").map(_.requests.size) shouldBe Some(0)
-
-    val b3: ElevatorBank = ElevatorBank.move(b2, 4)
-    b3.elevators.get("a").map(_.isMoving) shouldBe Some(false)
-    b3.elevators.get("a").map(_.requests.size) shouldBe Some(0)
-    b3.elevators.get("b").map(_.isMoving) shouldBe Some(false)
-    b3.elevators.get("b").map(_.requests.size) shouldBe Some(0)
-
-    val b4: ElevatorBank = ElevatorBank.dispatch(b3, ElevatorDispatchMessage("a", 7, None))
-    b4.elevators.get("a").map(_.isMoving) shouldBe Some(true)
-    b4.elevators.get("a").map(_.requests.size) shouldBe Some(1)
-    b4.elevators.get("b").map(_.isMoving) shouldBe Some(false)
-    b4.elevators.get("b").map(_.requests.size) shouldBe Some(0)
-
-    val b5: ElevatorBank = ElevatorBank.move(b4, 2)
-    b5.elevators.get("a").map(_.isMoving) shouldBe Some(false)
-    b5.elevators.get("a").map(_.requests.size) shouldBe Some(0)
-    b5.elevators.get("b").map(_.isMoving) shouldBe Some(false)
-    b5.elevators.get("b").map(_.requests.size) shouldBe Some(0)
+    b.elevators.get("a").map(_.isMoving) shouldBe Some(false)
+    b.elevators.get("a").map(_.requests.size) shouldBe Some(0)
+    b.elevators.get("b").map(_.isMoving) shouldBe Some(false)
+    b.elevators.get("b").map(_.requests.size) shouldBe Some(0)
   }
 }

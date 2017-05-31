@@ -11,29 +11,41 @@ class SharedElevatorCostFunctionTest extends FunSuite with Matchers {
   val initBank: ElevatorBank = ElevatorBank(initElevators)
 
   test("requests in the same direction") {
-    val b1: ElevatorBank = ElevatorBank.processRequest(initBank, FloorRequestMessage(4, Direction.Up, SharedElevatorCostFunction))
-    val b2: ElevatorBank = ElevatorBank.processRequest(b1, FloorRequestMessage(3, Direction.Up, SharedElevatorCostFunction))
+    val b = (for {
+      m1 <- ElevatorBank.request(FloorRequestMessage(4, Direction.Up, SharedElevatorCostFunction))
+      m2 <- ElevatorBank.request(FloorRequestMessage(3, Direction.Up, SharedElevatorCostFunction))
+    } yield {
+      m1 :: m2
+    }).exec(initBank)
 
-    b2.requests shouldBe empty
-    b2.elevators.get("a").map(_.requests.size) should contain (2)
-    b2.elevators.get("b").map(_.requests.size) should contain (0)
+    b.requests shouldBe empty
+    b.elevators.get("a").map(_.requests.size) should contain (2)
+    b.elevators.get("b").map(_.requests.size) should contain (0)
   }
 
   test("requests in the opposite directions") {
-    val b1: ElevatorBank = ElevatorBank.processRequest(initBank, FloorRequestMessage(4, Direction.Down, SharedElevatorCostFunction))
-    val b2: ElevatorBank = ElevatorBank.processRequest(b1, FloorRequestMessage(3, Direction.Up, SharedElevatorCostFunction))
+    val b = (for {
+      m1 <- ElevatorBank.request(FloorRequestMessage(4, Direction.Down, SharedElevatorCostFunction))
+      m2 <- ElevatorBank.request(FloorRequestMessage(3, Direction.Up, SharedElevatorCostFunction))
+    } yield {
+      m1 :: m2
+    }).exec(initBank)
 
-    b2.requests shouldBe empty
-    b2.elevators.get("a").map(_.requests.size) should contain (1)
-    b2.elevators.get("b").map(_.requests.size) should contain (1)
+    b.requests shouldBe empty
+    b.elevators.get("a").map(_.requests.size) should contain (1)
+    b.elevators.get("b").map(_.requests.size) should contain (1)
   }
 
   test("request without direction") {
-    val b1: ElevatorBank = ElevatorBank.dispatch(initBank, ElevatorDispatchMessage("a", 4, None))
-    val b2: ElevatorBank = ElevatorBank.processRequest(b1, FloorRequestMessage(3, Direction.Up, SharedElevatorCostFunction))
+    val b = (for {
+      m1 <- ElevatorBank.dispatch(ElevatorDispatchMessage("a", 4, None))
+      m2 <- ElevatorBank.request(FloorRequestMessage(3, Direction.Up, SharedElevatorCostFunction))
+    } yield {
+      m1 :: m2
+    }).exec(initBank)
 
-    b2.requests shouldBe empty
-    b2.elevators.get("a").map(_.requests.size) should contain (2)
-    b2.elevators.get("b").map(_.requests.size) should contain (0)
+    b.requests shouldBe empty
+    b.elevators.get("a").map(_.requests.size) should contain (2)
+    b.elevators.get("b").map(_.requests.size) should contain (0)
   }
 }

@@ -15,7 +15,7 @@ object ElevatorCostFunction {
       if (!e.isMoving) {
         totalCost
       } else {
-        inner(Elevator.moveOne(e), totalCost + 1)
+        inner(Elevator.moveOne.exec(e), totalCost + 1)
       }
     }
 
@@ -25,15 +25,15 @@ object ElevatorCostFunction {
 
 case class GreedyElevatorCostFunction(name: String) extends ElevatorCostFunction {
   def cost(elevator: Elevator, dispatch: ElevatorDispatchMessage): Option[Int] = {
-    if (Elevator.canDispatch(elevator, dispatch) && !elevator.isMoving) Some(0) else None
+    if (Elevator.canDispatch(dispatch).run(elevator)._2 && !elevator.isMoving) Some(0) else None
   }
 }
 
 object SingleOccupancyElevatorCostFunction extends ElevatorCostFunction {
 
   def cost(elevator: Elevator, dispatch: ElevatorDispatchMessage): Option[Int] = {
-    if (!elevator.isMoving && Elevator.canDispatch(elevator, dispatch)) {
-      val e = Elevator.dispatch(elevator, dispatch)
+    if (!elevator.isMoving && Elevator.canDispatch(dispatch).run(elevator)._2) {
+      val e = Elevator.dispatch(dispatch).exec(elevator)
       Some(ElevatorCostFunction.floorsToTravel(e))
     } else {
       None
@@ -44,11 +44,11 @@ object SingleOccupancyElevatorCostFunction extends ElevatorCostFunction {
 object SharedElevatorCostFunction extends ElevatorCostFunction {
   def cost(elevator: Elevator, dispatch: ElevatorDispatchMessage): Option[Int] = {
     def baseLineCost: Option[Int] = {
-      val e = Elevator.dispatch(elevator, dispatch)
+      val e = Elevator.dispatch(dispatch).exec(elevator)
       Some(ElevatorCostFunction.floorsToTravel(e))
     }
 
-    if (Elevator.canDispatch(elevator, dispatch)) {
+    if (Elevator.canDispatch(dispatch).run(elevator)._2) {
       elevator.requests.headOption match {
         case None => baseLineCost
         case Some(request) =>
