@@ -80,3 +80,11 @@ elevator c filled 1 at floor 4
 elevator a filled 1 at floor 5
 elevator b filled 1 at floor 8
 ```
+
+## Building and running
+
+The sample program can be executed using SBT:
+
+```bash
+$ sbt run
+```
