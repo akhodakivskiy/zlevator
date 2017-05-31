@@ -34,6 +34,16 @@ trait ElevatorCostFunction {
 
 Inital implementation 2862e70cd944529e445ee9a4b70993aad4159b99 consists of a series of functions that return updated instances of domain objects. The problem with this implementation is that the interface is hard to use and there is no meaningful feedback about the state of the system and the events that occur along the way.
 
+```scala
+bank.request(FloorRequestMessage(5, Direction.Up, SharedElevatorCostFunction))
+    .request(FloorRequestMessage(2, Direction.Up, SharedElevatorCostFunction))
+    .request(FloorRequestMessage(8, Direction.Up, GreedyElevatorCostFunction("b")))
+    .request(FloorRequestMessage(1, Direction.Up, SingleOccupancyElevatorCostFunction))
+    .moveOne
+    .dispatch(ElevatorDispatchMessage("c", 4, None))
+    .move(10)
+```
+
 ### Scalaz based implementation
 
 Improved imlementation is based on Scalaz `State` monad. This implementation allows to use more compact DSL as well as receive messages about the changes and events in the system.
@@ -44,7 +54,9 @@ val (bank, messages) = (for {
     m2 <- request(FloorRequestMessage(2, Direction.Up, SharedElevatorCostFunction))
     m3 <- request(FloorRequestMessage(8, Direction.Up, GreedyElevatorCostFunction("b")))
     m4 <- request(FloorRequestMessage(1, Direction.Up, SingleOccupancyElevatorCostFunction))
-    m5 <- move(10)
+    m5 <- moveOne
+    m6 <- dispatch(ElevatorDispatchMessage("c", 4, None))
+    m7 <- move(10)
 } yield {
     m1 ::: m2 ::: m3 ::: m4 ::: m5
 }).run(initBank)
