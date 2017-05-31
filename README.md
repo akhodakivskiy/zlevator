@@ -81,10 +81,37 @@ elevator a filled 1 at floor 5
 elevator b filled 1 at floor 8
 ```
 
-## Building and running
+## REPL
 
-The sample program can be executed using SBT:
+REPL to run the simulator step by step is provided. `zlevator` script will be generated upon staging or packaging the project using `sbt-native-packager`. Alternatively REPL can be executed using `sbt run`.
 
-```bash
+```
 $ sbt run
+...
+available commands:
+
+add <name> <min floor> <max floor>
+request <floor <up|down> <greedy <elevator name>|single|shared]>
+dispatch <name> <floor>
+move
+move <steps>
+
+> add a 0 10
+elevator a is added
+> add b 0 10
+elevator b is added
+> request 5 up shared
+request to 5 with up direction has been queued
+elevator a dispatched to floor 5
+> request 2 up shared
+request to 2 with up direction has been queued
+elevator b dispatched to floor 2
+> move 2
+elevator b completed dispatch to floor 2, 0 destinations remaining
+> dispatch b 7
+elevator b dispatched to floor 7
+> move 5
+elevator a completed dispatch to floor 5, 0 destinations remaining
+elevator b completed dispatch to floor 7, 0 destinations remaining
+>
 ```

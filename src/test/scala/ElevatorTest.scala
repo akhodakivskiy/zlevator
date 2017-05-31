@@ -9,7 +9,7 @@ class ElevatorTest extends FunSuite with Matchers {
 
   test("basic dispatch and move") {
     val e = (for {
-      m1 <- Elevator.dispatch(ElevatorDispatchMessage("a", 5, None))
+      m1 <- Elevator.dispatch(ElevatorDispatch("a", 5, None))
       m2 <- Elevator.moveOne
       m3 <- Elevator.move(4)
     } yield {
@@ -21,8 +21,8 @@ class ElevatorTest extends FunSuite with Matchers {
 
   test("move with multiple dispatches") {
     val e = (for {
-      m1 <- Elevator.dispatch(ElevatorDispatchMessage("a", 10, None))
-      m2 <- Elevator.dispatch(ElevatorDispatchMessage("a", 5, None))
+      m1 <- Elevator.dispatch(ElevatorDispatch("a", 10, None))
+      m2 <- Elevator.dispatch(ElevatorDispatch("a", 5, None))
       m3 <- Elevator.move(10)
     } yield {
       m1 :: m2.toList ::: m3

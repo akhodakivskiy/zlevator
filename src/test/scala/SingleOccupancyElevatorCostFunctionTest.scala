@@ -11,15 +11,15 @@ class SingleOccupancyElevatorCostFunctionTest extends FunSuite with Matchers {
   val initBank: ElevatorBank = ElevatorBank(initElevators)
 
   test("dispatch closest free elevator") {
-    ElevatorBank.request(FloorRequestMessage(3, Direction.Up, SingleOccupancyElevatorCostFunction)).exec(initBank).elevators.get("a").map(_.isMoving) should contain (true)
-    ElevatorBank.request(FloorRequestMessage(7, Direction.Up, SingleOccupancyElevatorCostFunction)).exec(initBank).elevators.get("b").map(_.isMoving) should contain (true)
+    ElevatorBank.request(FloorRequest(3, Direction.Up, SingleOccupancyElevatorCostFunction)).exec(initBank).elevators.get("a").map(_.isMoving) should contain (true)
+    ElevatorBank.request(FloorRequest(7, Direction.Up, SingleOccupancyElevatorCostFunction)).exec(initBank).elevators.get("b").map(_.isMoving) should contain (true)
   }
 
   test("requests are queued if all elevators are busy") {
     val b1 = (for {
-      m1 <- ElevatorBank.request(FloorRequestMessage(3, Direction.Up, SingleOccupancyElevatorCostFunction))
-      m2 <- ElevatorBank.request(FloorRequestMessage(7, Direction.Up, SingleOccupancyElevatorCostFunction))
-      m3 <- ElevatorBank.request(FloorRequestMessage(5, Direction.Up, SingleOccupancyElevatorCostFunction))
+      m1 <- ElevatorBank.request(FloorRequest(3, Direction.Up, SingleOccupancyElevatorCostFunction))
+      m2 <- ElevatorBank.request(FloorRequest(7, Direction.Up, SingleOccupancyElevatorCostFunction))
+      m3 <- ElevatorBank.request(FloorRequest(5, Direction.Up, SingleOccupancyElevatorCostFunction))
     } yield {
       m1 ::: m2 ::: m3
     }).exec(initBank)

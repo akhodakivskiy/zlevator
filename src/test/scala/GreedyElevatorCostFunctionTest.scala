@@ -13,10 +13,10 @@ class GreedyElevatorCostFunctionTest extends FunSuite with Matchers {
   test("process request with greedy elevator cost function") {
     val costFunction = GreedyElevatorCostFunction("a")
     val b = (for {
-      m1 <- ElevatorBank.request(FloorRequestMessage(5, Direction.Up, costFunction))
+      m1 <- ElevatorBank.request(FloorRequest(5, Direction.Up, costFunction))
       m2 <- ElevatorBank.moveOne
       m3 <- ElevatorBank.move(4)
-      m4 <- ElevatorBank.dispatch(ElevatorDispatchMessage("a", 7, None))
+      m4 <- ElevatorBank.dispatch(ElevatorDispatch("a", 7, None))
       m5 <- ElevatorBank.move(2)
     } yield {
       m1 ::: m2 ::: m3 ::: (m4 :: m5)

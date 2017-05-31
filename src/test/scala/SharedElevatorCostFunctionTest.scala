@@ -12,8 +12,8 @@ class SharedElevatorCostFunctionTest extends FunSuite with Matchers {
 
   test("requests in the same direction") {
     val b = (for {
-      m1 <- ElevatorBank.request(FloorRequestMessage(4, Direction.Up, SharedElevatorCostFunction))
-      m2 <- ElevatorBank.request(FloorRequestMessage(3, Direction.Up, SharedElevatorCostFunction))
+      m1 <- ElevatorBank.request(FloorRequest(4, Direction.Up, SharedElevatorCostFunction))
+      m2 <- ElevatorBank.request(FloorRequest(3, Direction.Up, SharedElevatorCostFunction))
     } yield {
       m1 :: m2
     }).exec(initBank)
@@ -25,8 +25,8 @@ class SharedElevatorCostFunctionTest extends FunSuite with Matchers {
 
   test("requests in the opposite directions") {
     val b = (for {
-      m1 <- ElevatorBank.request(FloorRequestMessage(4, Direction.Down, SharedElevatorCostFunction))
-      m2 <- ElevatorBank.request(FloorRequestMessage(3, Direction.Up, SharedElevatorCostFunction))
+      m1 <- ElevatorBank.request(FloorRequest(4, Direction.Down, SharedElevatorCostFunction))
+      m2 <- ElevatorBank.request(FloorRequest(3, Direction.Up, SharedElevatorCostFunction))
     } yield {
       m1 :: m2
     }).exec(initBank)
@@ -38,8 +38,8 @@ class SharedElevatorCostFunctionTest extends FunSuite with Matchers {
 
   test("request without direction") {
     val b = (for {
-      m1 <- ElevatorBank.dispatch(ElevatorDispatchMessage("a", 4, None))
-      m2 <- ElevatorBank.request(FloorRequestMessage(3, Direction.Up, SharedElevatorCostFunction))
+      m1 <- ElevatorBank.dispatch(ElevatorDispatch("a", 4, None))
+      m2 <- ElevatorBank.request(FloorRequest(3, Direction.Up, SharedElevatorCostFunction))
     } yield {
       m1 :: m2
     }).exec(initBank)

@@ -1,11 +1,12 @@
 import scala.annotation.tailrec
 import scala.collection.immutable.Queue
+import scala.util.matching.Regex
 
 /**
   * Created by anton on 5/30/17.
   */
 trait ElevatorCostFunction {
-  def cost(elevator: Elevator, dispatch: ElevatorDispatchMessage): Option[Int]
+  def cost(elevator: Elevator, dispatch: ElevatorDispatch): Option[Int]
 }
 
 object ElevatorCostFunction {
@@ -21,17 +22,28 @@ object ElevatorCostFunction {
 
     inner(elevator, 0)
   }
+
+  val GreedyPattern: Regex = "(\\w+)".r
+
+  def unapply(name: String): Option[ElevatorCostFunction] = {
+    name match {
+      case GreedyPattern(name) => Some(GreedyElevatorCostFunction(name))
+      case "single" => Some(SingleOccupancyElevatorCostFunction)
+      case "shared" => Some(SharedElevatorCostFunction)
+      case _ => None
+    }
+  }
 }
 
 case class GreedyElevatorCostFunction(name: String) extends ElevatorCostFunction {
-  def cost(elevator: Elevator, dispatch: ElevatorDispatchMessage): Option[Int] = {
+  def cost(elevator: Elevator, dispatch: ElevatorDispatch): Option[Int] = {
     if (Elevator.canDispatch(dispatch).run(elevator)._2 && !elevator.isMoving) Some(0) else None
   }
 }
 
 object SingleOccupancyElevatorCostFunction extends ElevatorCostFunction {
 
-  def cost(elevator: Elevator, dispatch: ElevatorDispatchMessage): Option[Int] = {
+  def cost(elevator: Elevator, dispatch: ElevatorDispatch): Option[Int] = {
     if (!elevator.isMoving && Elevator.canDispatch(dispatch).run(elevator)._2) {
       val e = Elevator.dispatch(dispatch).exec(elevator)
       Some(ElevatorCostFunction.floorsToTravel(e))
@@ -42,7 +54,7 @@ object SingleOccupancyElevatorCostFunction extends ElevatorCostFunction {
 }
 
 object SharedElevatorCostFunction extends ElevatorCostFunction {
-  def cost(elevator: Elevator, dispatch: ElevatorDispatchMessage): Option[Int] = {
+  def cost(elevator: Elevator, dispatch: ElevatorDispatch): Option[Int] = {
     def baseLineCost: Option[Int] = {
       val e = Elevator.dispatch(dispatch).exec(elevator)
       Some(ElevatorCostFunction.floorsToTravel(e))
